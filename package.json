@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "nitro dev",
-    "build": "nitro build"
+    "build": "nitro build",
+    "build-container": "podman build . -t docker.io/pqnet/minivec:latest"
   },
   "keywords": [],
   "author": "",
