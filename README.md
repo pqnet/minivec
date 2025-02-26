@@ -15,16 +15,37 @@ docker run -it --rm -p 3000:3000 pqnet/minivec
 ```
 
 add new documents to the store with a HTTP POST:
+
 ```bash
 curl -H "Content-Type: application/json" -d  '{ "documents": [{ "content": "hello world", "metadata":{} }]}' localhost:3000/api/documents
 ```
 
 And search them using HTTP GET:
+
 ```bash
 curl 'localhost:3000/api/documents?q=hello'
 ```
 
+### Backup and Restore
+
+Backup the database to a JSON file:
+
+```bash
+curl 'localhost:3000/api/backup' > minivec-backup.json
+```
+
+Restore from a backup file:
+
+```bash
+# Restore while preserving existing documents
+curl -X POST -H "Content-Type: application/json" -d @minivec-backup.json localhost:3000/api/backup
+
+# Restore and clear existing documents
+curl -X POST -H "Content-Type: application/json" -d @minivec-backup.json 'localhost:3000/api/backup?clear=true'
+```
+
 ## Persistence
+
 By default models are downloaded in the `/models` directory and the database is saved in the `/app/.data` directory (inside the container).
 To allow re-using model cache, or to persist the saved vectors between runs, you can map host directories or mount named volumes at these paths, e.g.
 
@@ -33,13 +54,17 @@ podman run -it --rm -p 3000:3000 -v minivec-models-cache:/models -v minivec-data
 ```
 
 (similarly with `docker`)
+
 ```bash
 docker run -it --rm -p 3000:3000 -v minivec-models-cache:/models -v minivec-data:/app/.data pqnet/minivec
 ```
 
 ## Configuration
+
 Use environment variables to configure which models to load. see [nitro.config.ts](nitro.config.ts) for a full list of the usable variables
+
 ### Model choice
+
 `bge-m3` (for embedding) and `bge-reranker-v2-m3` (for reranking) are automatically downloaded and used by the container.
 It is possible to choose different models by specifying a local file name, an http/https URL or an huggingface repository to download the models automatically.
 See https://node-llama-cpp.withcat.ai/guide/downloading-models for the list of compatible URL schemes and parameters.
