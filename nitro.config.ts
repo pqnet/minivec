@@ -9,8 +9,8 @@ export default defineNitroConfig({
   runtimeConfig: {
     localModels: {
       baseDir: "./models/",
-      embedModelFile: "bge-m3-q8_0.gguf",
-      rankModelFile: "bge-reranker-v2-m3-q8_0.gguf",
+      embedModelFile: "hf:pqnet/bge-m3-Q8_0-GGUF:Q8_0",
+      rankModelFile: "hf:pqnet/bge-reranker-v2-m3-Q8_0-GGUF:Q8_0",
     },
   },
 });

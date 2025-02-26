@@ -18,7 +18,5 @@ COPY --from=build /src/.output/ .
 
 ENV NODE_ENV=production
 ENV NITRO_LOCAL_MODELS_BASE_DIR=/models/
-ENV NITRO_LOCAL_MODELS_EMBED_MODEL_FILE=bge-m3-q8_0.gguf
-ENV NITRO_LOCAL_MODELS_RANK_MODEL_FILE=bge-reranker-v2-m3-q8_0.gguf
 
 CMD ["server/index.mjs"]
