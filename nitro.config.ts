@@ -7,6 +7,7 @@ export default defineNitroConfig({
     database: true,
   },
   runtimeConfig: {
+    disableWrite: false,
     localModels: {
       baseDir: "./models/",
       embedModelFile: "hf:pqnet/bge-m3-Q8_0-GGUF:Q8_0",

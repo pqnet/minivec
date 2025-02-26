@@ -4,6 +4,14 @@ export default defineLazyEventHandler(async () => {
   const db = await getDb();
   const { embeddingContext } = await useAiContext();
   return defineEventHandler(async (event) => {
+    const { disableWrite } = useRuntimeConfig(event);
+    if (disableWrite) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "Forbidden",
+        message: "Write operations are disabled",
+      });
+    }
     const { documents } = await readBody<{
       documents: { content: string; metadata: unknown }[];
     }>(event);
