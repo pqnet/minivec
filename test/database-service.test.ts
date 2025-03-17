@@ -108,5 +108,44 @@ describe("DatabaseService", () => {
       assert.strictEqual(docsNeedingIndexingContent[1].id, docId2, "should be the second document");
       assert.strictEqual(docsNeedingIndexingContent[2].id, docId3, "should be the third document");
     });
+
+    it('should find applicable indices for a document', async () => {
+      // Create multiple indices
+      await dbService.createIndex('content-index', '$.content', 'Content index');
+      await dbService.createIndex('title-index', '$.title', 'Title index');
+      await dbService.createIndex('nested-index', '$.details.text', 'Nested property index');
+
+      // Add a document with multiple applicable fields
+      const docId = await dbService.addDocument({
+        content: 'Document content',
+        title: 'Document title',
+        details: {
+          text: 'Nested text content',
+          number: 42
+        },
+        tags: ['test', 'document']
+      });
+
+      // Find applicable indices by document ID
+      const indicesById = await dbService.findApplicableIndices(docId);
+      assert.strictEqual(indicesById.length, 3, 'Should find 3 applicable indices for document ID');
+
+      const indexNames = indicesById.map(idx => idx.name).sort();
+      assert.deepStrictEqual(indexNames, ['content-index', 'nested-index', 'title-index'].sort());
+
+      // Find applicable indices by document object
+      const docObject = {
+        content: 'Another document',
+        details: {
+          text: 'More nested content'
+        }
+      };
+
+      const indicesByObject = await dbService.findApplicableIndices(docObject);
+      assert.strictEqual(indicesByObject.length, 2, 'Should find 2 applicable indices for document object');
+      assert.ok(indicesByObject.some(idx => idx.name === 'content-index'), 'Should include content index');
+      assert.ok(indicesByObject.some(idx => idx.name === 'nested-index'), 'Should include nested index');
+      assert.ok(!indicesByObject.some(idx => idx.name === 'title-index'), 'Should not include title index');
+    });
   });
 });

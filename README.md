@@ -28,10 +28,25 @@ curl -X POST -H "Content-Type: application/json" -d '{"name":"title-index","inde
 
 ## Adding Documents
 
-Add new documents to the store with a HTTP POST, specifying which indices to use:
+Add new documents to the store with a HTTP POST. Minivec will automatically detect and use all applicable indices for your documents:
 
 ```bash
-# Add documents with content and title to both indices
+# Add a document - will automatically be indexed in all applicable indices
+curl -X POST -H "Content-Type: application/json" -d '{
+  "documents": [
+    {
+      "content": "Artificial intelligence is transforming industries across the globe.",
+      "title": "AI Revolution",
+      "metadata": { "tags": ["ai", "technology"] }
+    }
+  ]
+}' localhost:3000/api/documents
+```
+
+You can also specify which indices you want to use (any non-applicable indices will be ignored):
+
+```bash
+# Index document only in the title index (if applicable)
 curl -X POST -H "Content-Type: application/json" -d '{
   "documents": [
     {
@@ -40,9 +55,44 @@ curl -X POST -H "Content-Type: application/json" -d '{
       "metadata": { "tags": ["ai", "technology"] }
     }
   ],
-  "indices": ["default", "title-index"]
+  "indices": ["title-index"]
 }' localhost:3000/api/documents
 ```
+
+The response includes a summary of which indices were used:
+
+```json
+{
+  "success": true,
+  "count": 1,
+  "indices": "default (1/1), title-index (1/1)"
+}
+```
+
+## Document Structure
+
+Documents in Minivec have flexible JSON structures. The only requirement is that the property referenced by the index's `indexedPropertyPath` must exist as a string when you want to index the document.
+
+Examples of valid documents:
+
+```json
+// Simple document with content property
+{ "content": "This is the document content" }
+
+// Document with nested properties
+{
+  "title": "My Document",
+  "details": {
+    "content": "This is the document content",
+    "author": "John Doe"
+  },
+  "metadata": {
+    "tags": ["example", "documentation"]
+  }
+}
+```
+
+You can create indices with appropriate JSON paths like `$.content`, `$.title`, or `$.details.content` to target different properties in your documents.
 
 ## Searching Documents
 
@@ -109,28 +159,3 @@ ENV NITRO_LOCAL_MODELS_RANK_MODEL_FILE=my-ranking-model.gguf
 COPY db.sqlite3 /app/.data/db.sqlite3
 ENV NITRO_DISABLE_WRITE=true
 ```
-
-## Document Structure
-
-Documents in Minivec have flexible JSON structures. The only requirement is that the property referenced by the index's `indexedPropertyPath` must exist as a string when you want to index the document.
-
-Examples of valid documents:
-
-```json
-// Simple document with content property
-{ "content": "This is the document content" }
-
-// Document with nested properties
-{
-  "title": "My Document",
-  "details": {
-    "content": "This is the document content",
-    "author": "John Doe"
-  },
-  "metadata": {
-    "tags": ["example", "documentation"]
-  }
-}
-```
-
-You can index different properties by creating indices with appropriate JSON paths, such as `$.content`, `$.title`, or `$.details.content`.

@@ -197,6 +197,53 @@ export class DatabaseService {
 
     return result.rows.length ? String(result.rows[0].textContent) : null;
   }
+
+  /**
+   * Find all indices that can be applied to a document based on its structure
+   * @param document Document ID or document object
+   * @returns Array of applicable indices
+   */
+  async findApplicableIndices(document: number | any): Promise<DocumentIndex[]> {
+    // If document is a number (ID), use it directly in the SQL query
+    // Otherwise, we'll need to pass the JSON data
+    if (typeof document === 'number') {
+      const result = await this.db.sql`
+        SELECT
+          i.id,
+          i.name,
+          i.indexed_property_path as indexedPropertyPath,
+          i.description,
+          (SELECT COUNT(*) FROM embeddings WHERE index_id = i.id) as documentCount
+        FROM indices i
+        WHERE EXISTS (
+          SELECT 1
+          FROM documents d
+          WHERE d.id = ${document}
+          AND JSON_TYPE(d.data, i.indexed_property_path) = 'text'
+        )
+        ORDER BY i.name
+      `;
+
+      return result.rows as unknown as DocumentIndex[];
+    } else {
+      // Document is an object, we'll stringify it
+      const docJson = JSON.stringify(document);
+
+      const result = await this.db.sql`
+        SELECT
+          i.id,
+          i.name,
+          i.indexed_property_path as indexedPropertyPath,
+          i.description,
+          0 as documentCount
+        FROM indices i
+        WHERE JSON_TYPE(${docJson}, i.indexed_property_path) = 'text'
+        ORDER BY i.name
+      `;
+
+      return result.rows as unknown as DocumentIndex[];
+    }
+  }
 }
 
 export function createDatabaseService(db: Db): DatabaseService {
