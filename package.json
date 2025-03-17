@@ -11,10 +11,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.4.1",
+  "packageManager": "pnpm@10.6.3+sha512.bb45e34d50a9a76e858a95837301bfb6bd6d35aea2c5d52094fa497a467c43f5c440103ce2511e9e0a2f89c3d6071baac3358fc68ac6fb75e2ceb3d2736065e6",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
-    "nitropack": "^2.10.4",
+    "nitropack": "^2.11.6",
     "tsx": "^4.19.3"
   },
   "pnpm": {
@@ -38,8 +38,8 @@
     ]
   },
   "dependencies": {
-    "better-sqlite3": "^11.8.1",
-    "db0": "^0.2.4",
+    "better-sqlite3": "^11.9.0",
+    "db0": "^0.3.1",
     "node-llama-cpp": "^3.6.0",
     "sqlite-vec": "0.1.7-alpha.2"
   }

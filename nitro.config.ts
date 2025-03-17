@@ -6,6 +6,12 @@ export default defineNitroConfig({
   experimental: {
     database: true,
   },
+  database: {
+    default: {
+      connector: "better-sqlite3",
+      options: {},
+    },
+  },
   runtimeConfig: {
     disableWrite: false,
     localModels: {
