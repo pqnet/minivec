@@ -1,22 +1,16 @@
 export default defineLazyEventHandler(async () => {
-  const db = await getDb();
-  
+  const dbService = await getDatabaseService();
+
   return defineEventHandler(async (event) => {
     const method = event.method;
     const { disableWrite } = useRuntimeConfig(event);
-    
+
     // GET - List all indices
     if (method === 'GET') {
-      const indices = await db.sql`
-        SELECT id, name, indexed_property_path, description,
-               (SELECT COUNT(*) FROM embeddings WHERE index_id = indices.id) as document_count
-        FROM indices
-        ORDER BY name
-      `;
-      
-      return indices.rows;
+      const indices = await dbService.listIndices();
+      return indices;
     }
-    
+
     // POST - Create a new index
     if (method === 'POST') {
       if (disableWrite) {
@@ -26,43 +20,51 @@ export default defineLazyEventHandler(async () => {
           message: "Write operations are disabled",
         });
       }
-      
-      const { name, indexed_property_path, description } = await readBody(event);
-      
-      if (!name || !indexed_property_path) {
+
+      const body = await readBody(event);
+
+      if (!body.name || !body.indexedPropertyPath) {
         throw createError({
           statusCode: 400,
           statusMessage: "Bad Request",
-          message: "Name and indexed_property_path are required",
+          message: "Name and indexedPropertyPath are required",
         });
       }
-      
+
       try {
-        const result = await db.sql`
-          INSERT INTO indices (name, indexed_property_path, description)
-          VALUES (${name}, ${indexed_property_path}, ${description || null})
-          RETURNING id, name, indexed_property_path, description
-        `;
-        
-        return result.rows[0];
+        const result = await dbService.createIndex(
+          body.name,
+          body.indexedPropertyPath,
+          body.description
+        );
+
+        return result;
       } catch (error) {
         if (error.message?.includes('UNIQUE constraint failed')) {
           throw createError({
             statusCode: 409,
             statusMessage: "Conflict",
-            message: `Index with name "${name}" already exists`,
+            message: `Index with name "${body.name}" already exists`,
           });
         }
-        
+
+        if (error.message?.includes('Invalid property path')) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: "Bad Request",
+            message: error.message,
+          });
+        }
+
         throw createError({
           statusCode: 500,
           statusMessage: "Internal Server Error",
-          message: "Failed to create index",
+          message: error.message || "Failed to create index",
           cause: error,
         });
       }
     }
-    
+
     throw createError({
       statusCode: 405,
       statusMessage: "Method Not Allowed",
