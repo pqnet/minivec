@@ -4,6 +4,7 @@
   "description": "",
   "type": "module",
   "scripts": {
+    "test": "tsx --test ./test/**/*.test.ts",
     "dev": "nitro dev",
     "build": "nitro build",
     "build-container": "podman build . -t docker.io/pqnet/minivec:latest"
