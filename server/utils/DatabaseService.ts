@@ -24,7 +24,7 @@ export interface DocumentForIndexing {
 export interface EmbeddingEntry {
   documentId: number;
   indexId: number;
-  vector: number[] | Float32Array;
+  vector: readonly number[] | Float32Array;
 }
 
 export class DatabaseService {
@@ -105,7 +105,7 @@ export class DatabaseService {
 
   // Index operations
   async createIndex(name: string, indexedPropertyPath: string, description?: string): Promise<DocumentIndex> {
-    // Validate the property path by making sure it's a valid JSON path
+    // TODO Validate the property path by making sure it's a valid JSON path
     try {
       await this.db.sql`SELECT json_extract('{"test": "value"}', ${indexedPropertyPath})`;
     } catch (error) {

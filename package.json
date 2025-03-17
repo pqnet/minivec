@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "tsx --test ./test/**/*.test.ts",
+    "test:integration": "node ./test/api-integration.test.js",
     "dev": "nitro dev",
     "build": "nitro build",
     "build-container": "podman build . -t docker.io/pqnet/minivec:latest"
