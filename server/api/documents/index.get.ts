@@ -1,13 +1,15 @@
 import { Primitive } from "db0";
 
 export default defineLazyEventHandler(async () => {
-  const db = await getDb();
+  const dbService = await getDatabaseService();
   const { embeddingContext, rankingContext } = await useAiContext();
+
   return defineEventHandler(async (event) => {
     // Get query parameters
     const query = getQuery(event);
     const q = [query.q].flat().join(" ");
     const n = parseInt(query.n as string) || 5; // Default to 5 if not provided
+    const indexName = query.index as string || 'default'; // Default to the default index
 
     if (!q) {
       return {
@@ -17,65 +19,73 @@ export default defineLazyEventHandler(async () => {
     }
 
     try {
-      // Calculate k for retrieval (n+1) * 5
-      const k = (n + 1) * 5;
-
-      // Calculate embedding for the query
       console.log(
         `[${new Date().toISOString()}] Calculating embedding for query:`,
         q
       );
       const embedding = await embeddingContext.getEmbeddingFor(q);
 
-      // Find closest documents in the database using cosine distance
+      // Calculate k for retrieval (n+1) * 5 for reranking
+      const k = (n + 1) * 5;
+
       console.log(
         `[${new Date().toISOString()}] Searching for documents similar to:`,
-        q
+        q,
+        `using index: ${indexName}`
       );
-      const documents = await db.sql<{
-        rows: Array<{ id: number; content: string; metadata: string }>;
-      }>`
-            SELECT id, content, json(metadata) metadata FROM documents
-            ORDER BY vec_distance_cosine(embedding, ${
-              new Float32Array(embedding.vector) as unknown as Primitive
-            }) ASC
-            LIMIT ${k}
-        `;
 
-      if (!documents || documents.rows.length === 0) {
+      // Get candidate documents
+      const documents = await dbService.searchDocumentsByVector(
+        embedding.vector,
+        indexName,
+        k
+      );
+
+      if (!documents.length) {
         return { results: [] };
       }
 
-      // Rerank the results using the reranker
+      // Get the index for property path
+      const index = await dbService.getIndexByName(indexName);
+      if (!index) {
+        throw new Error(`Index "${indexName}" not found`);
+      }
+
+      // Extract content for reranking
+      const contents: string[] = [];
+      for (const doc of documents) {
+        const text = await dbService.extractTextByPropertyPath(doc.id, index.indexedPropertyPath);
+        contents.push(text || '');
+      }
+
+      // Rerank the results
       console.log(
         `[${new Date().toISOString()}] Reranking ${
-          documents.rows.length
+          documents.length
         } documents`
       );
-      const scores = await rankingContext.rankAll(
-        q,
-        documents.rows.map((doc) => doc.content)
-      );
-      const results = documents.rows
-        .map((document, i) => ({
-          document: { ...document, metadata: JSON.parse(document.metadata) },
-          score: scores[i],
+      const scores = await rankingContext.rankAll(q, contents);
+
+      // Combine and return results
+      const results = documents
+        .map((doc, i) => ({
+          document: doc.data,
+          score: scores[i]
         }))
         .slice(0, n);
-      // Return the n highest ranked results
+
       console.log(
         `[${new Date().toISOString()}] Found ${results.length} results`
       );
-      return {
-        results,
-      };
+
+      return { results };
     } catch (error) {
       console.error("Error searching documents:", error);
       throw createError({
-        statusCode: 500,
-        statusMessage: "Internal Server Error",
+        statusCode: error.message?.includes('not found') ? 400 : 500,
+        statusMessage: error.message?.includes('not found') ? "Bad Request" : "Internal Server Error",
         cause: error,
-        message: "Failed to search documents",
+        message: error.message || "Failed to search documents",
       });
     }
   });
