@@ -2,12 +2,14 @@ export default defineLazyEventHandler(async () => {
   const db = await getDb();
   
   return defineEventHandler(async (event) => {
-    const method = getMethod(event);
+    const method = event.method;
+    const { disableWrite } = useRuntimeConfig(event);
     
     // GET - List all indices
     if (method === 'GET') {
       const indices = await db.sql`
-        SELECT id, name, indexed_property_path, description
+        SELECT id, name, indexed_property_path, description,
+               (SELECT COUNT(*) FROM embeddings WHERE index_id = indices.id) as document_count
         FROM indices
         ORDER BY name
       `;
@@ -17,7 +19,6 @@ export default defineLazyEventHandler(async () => {
     
     // POST - Create a new index
     if (method === 'POST') {
-      const { disableWrite } = useRuntimeConfig(event);
       if (disableWrite) {
         throw createError({
           statusCode: 403,
